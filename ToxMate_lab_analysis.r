@@ -1,22 +1,54 @@
-#define working directory
-working_dir = "D:/VP/Data_alex/ToxMate/calibration_2018/2-Script"
+#define working directory - locate data files
+working_dir = "D:/VP/Analyse-R/Data"
 setwd(working_dir)
 
-#
-molecule<-"CuSo4"
-conc<-"EC50"
+#define chemical and concentration (automatic in python)
+molecule<-"Cu"
+conc<-"100ugL"
 
-tx3<-read.csv2("Cu.csv",sep="\t",header=TRUE,dec=".",row.names=NULL) 
-tx2<-read.csv2("Cu_5.csv",sep="\t",header=TRUE,dec=".",row.names=NULL)                ###### ouvrir dossier
-tx4<-read.csv2("Cu_25.csv",sep="\t",header=TRUE,dec=".",row.names=NULL) 
-tx6<-read.csv2("temoin-cu.csv",sep="\t",header=TRUE,dec=".",row.names=NULL) 
+#datafiles
+datafiles = list.files(working_dir)
+datafile = 'test.xls'
 
-            ###### ouvrir dossier
+#read data - utf16 encoding !
+df<-read.csv2(datafile,sep="\t",header=TRUE,dec=".",fileEncoding = "UTF-16LE",encoding="UTF-16")
 
-tx<-rbind(tx3,tx2,tx4,tx6)
+#concatenate data
+###
 
+#ignore quantif data - look at locomotion (distance)
+df <- df[df$datatype == "Locomotion",]
 
-                                                           #### changement noms de colonne
+# sort first by time, then species, then location in grid
+df <- df[with(df, order(sn,pn,location,aname)),]
+row.names(df) <- NULL   #reset index
+
+# create date column - also in datetime format
+df$time <- c(paste(df$stdate,df$sttime))
+df$datetime <- c(as.POSIXct(paste(df$stdate,df$sttime),format = "%d/%m/%Y %H:%M:%S"))
+df$specie <- c(substring(df$location,1,1))
+
+#select columns to retain
+good_cols <- c(
+  "time","datetime","location","stdate",
+  "specie","inact","inadur","inadist",
+  "smlct","smldur","smldist","larct",
+  "lardur","lardist","emptyct","emptydur")
+
+#select desired output columns
+df <- subset(df, select = good_cols)
+
+#create column for cage location, time in seconds from unix timestamp, total distance
+df$animal <- as.integer(substring(df$location,2,3)) #cage location as integer
+df$abtime <- as.numeric(df$datetime) - as.numeric(df$datetime[1])
+df$dist <- df$inadist + df$smldist + df$lardist
+
+df_gamm <- df[df$specie == 'G',]
+df_erpo <- df[df$specie == 'E',]
+df_radix <- df[df$specie == 'R',]
+
+## Continue with distance dataframe
+
 colnames(tx)[2]<-c("date")
 colnames(tx)[3]<-c("abtime")
 colnames(tx)[4]<-c("rq")
@@ -27,43 +59,8 @@ colnames(tx)[6]<-c("condition")
 head(tx)
 
 
-#### entrees coordonnees cameras
-Tx4gammare<-"16401404"                                                                 ###### donner nom bestiole et concentration associé
-Tx2gammare<-"16401408"                                                                 ###### donner nom bestiole et concentration associé
-Tx3gammare<-"16401400" 
-Tx5gammare<-"16401399"                                                                 ###### donner nom bestiole et concentration associé
-Tx7gammare<-"16466271" 
-Tx8gammare<-"16466285"  
-TxTgammare<-"16466317"                                                                ###### donner nom bestiole et concentration associé
-
-Tx4erpobdella<-"16401407"                                                              ##### donner nom bestiole et concentration associé
-Tx2erpobdella<-"16401409"                                                               ##### donner nom bestiole et concentration associé
-Tx3erpobdella<-"16466278"  
-Tx5erpobdella<-"16401367"                                                                 ###### donner nom bestiole et concentration associé
-Tx7erpobdella<-"16466289" 
-Tx8erpobdella<-"16466279"  
-TxTerpobdella<-"16401346"                                                              ##### donner nom bestiole et concentration associé
-
-Tx4radix<-"16401352"                                                                  ##### donner nom bestiole et concentration associé
-Tx2radix<-"16466079"                                                                  ##### donner nom bestiole et concentration associé
-Tx3radix<-"16466068"
-Tx5radix<-"16401369"                                                                 ###### donner nom bestiole et concentration associé
-Tx7radix<-"16466271" 
-Tx8radix<-"16466283"  
-TxTradix<-"16401384"                                                                   ##### donner nom bestiole et concentration associé
-
 
 ##############conditions:
-
-### Tox 4,2,3 et 6
-gam_c1<-tx[tx$channel==Tx3gammare,]                                                   #####  créer tablea par bestiole et concentration
-gam_c1$specie<-"Gammarus"                                                              #####  créer tablea par bestiole et concentration
-gam_c2<-tx[tx$channel==Tx2gammare,]                                                    #####  créer tablea par bestiole et concentration
-gam_c2$specie<-"Gammarus" 
-gam_c3<-tx[tx$channel==Tx4gammare,]                                                    #####  créer tablea par bestiole et concentration
-gam_c3$specie<-"Gammarus"                                                              #####  créer tablea par bestiole et concentration
-gam_tem<-tx[tx$channel==TxTgammare,]                                                   #####  créer tablea par bestiole et concentration
-gam_tem$specie<-"Gammarus"  
                                                              #####  créer tablea par bestiole et concentration
 
 erp_c1<-tx[tx$channel==Tx4erpobdella,]                                                  #####  créer tablea par bestiole et concentration
